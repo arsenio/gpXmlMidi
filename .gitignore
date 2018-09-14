@@ -1,0 +1,10 @@
+*.pyc
+*.swp
+*.swo
+
+.DS_Store
+
+.env*
+local
+.cache/
+__pycache__
