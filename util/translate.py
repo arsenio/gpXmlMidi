@@ -62,6 +62,8 @@ def createMIDIEvents(part, track, verbose=False):
             if isinstance(articulation, music21.articulations.TechnicalIndication):
                 if articulation.displayText == "palm-mute":
                     meta["palmMute"] = True
+                if articulation.displayText == "vibrato":
+                    meta["vibrato"] = True
 
         computedOffset = music21.midi.translate.offsetToMidi(note.offset) + cumulativeDifference
 
@@ -91,40 +93,36 @@ def createMIDIEvents(part, track, verbose=False):
             else:
                 noteEvents.extend(music21.midi.translate.noteToMidiEvents(note))
 
-            index = 0
-            while index < len(noteEvents):
-                event = noteEvents[index]
-
+            for event in noteEvents:
                 event.channel = 1
 
                 if isinstance(event, music21.midi.DeltaTime):
                     offset += event.time
-#
-#                    nextEvent = noteEvents[index + 1]
-#                    if nextEvent.type == "NOTE_ON":
-#                        if nextEvent.pitch in skips:
-#                            if skips[nextEvent.pitch]["on"]:
-#                                index += 2
-#                                continue
-#
-#                    if nextEvent.type == "NOTE_OFF":
-#                        if nextEvent.pitch in skips:
-#                            if skips[nextEvent.pitch]["off"]:
-#                                index += 2
-#                                continue
 
-                # Guitar Pro for some reason shifts basslines down an octave
                 if "bass" in partName:
                     if event.type == "NOTE_ON" or event.type == "NOTE_OFF":
-                        event.pitch += 12
+                        if event.pitch:
+                            event.pitch += 12
 
                 # Scale up the velocities so that GP max = MIDI max
                 if event.type == "NOTE_ON":
                     event.velocity = min(int(event.velocity * 1.42), 127)
 
+                # All skips are rendered as null pitches, which preserves
+                # timings
+                if event.type in ["NOTE_ON", "NOTE_OFF"]:
+                    if event.type == "NOTE_ON":
+                        if event.pitch in skips:
+                            if skips[event.pitch]["on"]:
+                                event.pitch = 0
+
+                    if event.type == "NOTE_OFF":
+                        if event.pitch in skips:
+                            if skips[event.pitch]["off"]:
+                                event.pitch = 0
+
+                # Guitar Pro for some reason shifts basslines down an octave
                 wrapped = music21.base.ElementWrapper(event)
                 eventsAndMeta.append((wrapped, meta))
-
-                index += 1
 
     return eventsAndMeta

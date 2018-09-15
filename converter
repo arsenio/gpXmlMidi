@@ -7,6 +7,7 @@ import getopt
 import hashlib
 import music21
 import os.path
+import re
 import sys
 import tempfile
 
@@ -32,22 +33,25 @@ def spin(text):
     return spinner
 
 def usage():
-    print("Usage: converter [-h/--help] [-v/--verbose] [-p postprocessor] XML-filename", file=sys.stderr)
+    print("Usage: converter [-h/--help] [-v/--verbose] [-f/--force] [-p postprocessor] XML-filename", file=sys.stderr)
     sys.exit(-1)
 
 def main(args):
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hp:v", ["help", "postprocessor="])
+        opts, args = getopt.getopt(sys.argv[1:], "hvfp:", ["help", "verbose", "force", "postprocessor="])
     except getopt.GetoptError as err:
         print(err)
         usage()
 
     verbose = False
+    force = False
     postproc = None
 
     for o, a in opts:
         if o == "-v":
             verbose = True
+        elif o == "-f":
+            force = True
         elif o == "-p":
             if a in ["realeight"]:
                 postproc = a
@@ -87,6 +91,8 @@ def main(args):
             spinner = spin("Fetching {} from cache".format(filename))
 
         try:
+            if force:
+                raise Exception("Force invoked")
             score = music21.converter.thaw(cachename)
             if verbose:
                 spinner.succeed()
@@ -108,6 +114,23 @@ def main(args):
                     expr = markup.new_tag("other-technical", class_="palmMute")
                     expr.append("palm-mute")
                     technicals.append(expr)
+
+            # Guitar Pro 7 has a number of bizarre nonstandard entities
+            # in their XML export.
+            for note in markup("note"):
+                noteText = str(note)
+                if "GP7" in noteText:
+                    m = re.search(r"<\?GP7([^\?]+)\?>", noteText, re.M)
+                    if m:
+                        gp7 = BeautifulSoup(m.group(1), "xml")
+                        vibrato = gp7.find("vibrato")
+                        if vibrato:
+                            notations = note.notations or markup.new_tag("notations")
+                            technicals = notations.technical or markup.new_tag("technical")
+                            if not technicals("other-technical.vibrato"):
+                                expr = markup.new_tag("other-technical", class_="vibrato")
+                                expr.append("vibrato")
+                            technicals.append(expr)
 
             if verbose:
                 spinner.succeed()
