@@ -11,8 +11,9 @@ import re
 import sys
 import tempfile
 
-from postprocess.base import BasePostprocessor
-from postprocess.realeight import RealEightPostprocessor
+from postprocess import (checkForPreprocessor, selectPreprocessors,
+                         reduceEventsAndMeta)
+
 from util import extract
 from util import translate
 
@@ -53,16 +54,15 @@ def main(args):
         elif o == "-f":
             force = True
         elif o == "-p":
-            if a in ["realeight"]:
-                postproc = a
-            else:
-                assert False, "{} is not a recognize postprocessor".format(a)
+            assert checkForPreprocessor(a), "'{}' is not a recognized postprocessor".format(a)
+            postproc = a
         else:
             assert False, "illegal option"
 
     if len(args) != 1:
         usage()
 
+    postprocs = selectPreprocessors(postproc)
     filename = args[0]
 
     if not os.path.isfile(filename):
@@ -190,11 +190,9 @@ def main(args):
                                                                track,
                                                                verbose=verbose)
 
-                    processor = BasePostprocessor()
-                    if postproc == "realeight":
-                        processor = RealEightPostprocessor()
-
-                    track.events = processor.run(eventsAndMeta)
+                    for processor in postprocs:
+                        eventsAndMeta = processor().run(eventsAndMeta)
+                    track.events = reduceEventsAndMeta(eventsAndMeta)
 
                     midiFile = music21.midi.MidiFile()
                     midiFile.tracks.append(track)

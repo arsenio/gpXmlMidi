@@ -2,7 +2,7 @@ import music21
 
 class RealEightPostprocessor:
     def run(self, eventsAndMeta):
-        events = []
+        newEventsAndMeta = []
 
         priorVibrato = False
         for event, meta in eventsAndMeta:
@@ -27,11 +27,11 @@ class RealEightPostprocessor:
                     vibratoOn.pitch = 1      # CC 1 = Mod Wheel MSB
                     vibratoOn.velocity = 64
                     vibratoOn.channel = 1
-                    events.append(vibratoOn)
+                    newEventsAndMeta.append((vibratoOn, meta))
 
                     delta = music21.midi.DeltaTime(event.track)
                     delta.time = 0
-                    events.append(delta)
+                    newEventsAndMeta.append((delta, meta))
 
                     priorVibrato = True
 
@@ -42,14 +42,14 @@ class RealEightPostprocessor:
                     vibratoOff.pitch = 1     # CC 1 = Mod Wheel MSB
                     vibratoOff.velocity = 0
                     vibratoOff.channel = 1
-                    events.append(vibratoOff)
+                    newEventsAndMeta.append((vibratoOff, meta))
 
                     delta = music21.midi.DeltaTime(event.track)
                     delta.time = 0
-                    events.append(delta)
+                    newEventsAndMeta.append((delta, meta))
 
                     priorVibrato = False
 
-            events.append(event)
+            newEventsAndMeta.append((event, meta))
 
-        return events
+        return newEventsAndMeta

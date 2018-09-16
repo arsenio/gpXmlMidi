@@ -5,10 +5,6 @@ class BasePostprocessor:
         with the first element being a translated MidiEvent
         and the second being a dictionary of metadata to influence processing.
 
-        Return a list of just the MidiEvents.
+        Return a list of events+meta tuples
         """
-        events = []
-        for event, meta in eventsAndMeta:
-            events.append(event)
-
-        return events
+        return eventsAndMeta
