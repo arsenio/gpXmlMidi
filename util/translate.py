@@ -7,6 +7,17 @@ import sys
 Translation methods for creating MIDI events from various data formats.
 """
 
+DYNAMICS_VELOCITY_MAP = {
+    "ppp": 16,
+    "pp": 33,
+    "p": 49,
+    "mp": 64,
+    "mf": 80,
+    "f": 96,
+    "ff": 112,
+    "fff": 127
+}
+
 def _findTieSkips(note):
     skips = {}
     innerNotes = note if note.isChord else [note]
@@ -44,6 +55,7 @@ def createMIDIEvents(part, track, verbose=False):
     cumulativeDifference = 0
     skips = []
 
+    velocity = 80
     for note in notesAndRests:
 
         meta = {"partName": partName}
@@ -60,10 +72,18 @@ def createMIDIEvents(part, track, verbose=False):
                         note.remove(pitch)
 
             if isinstance(articulation, music21.articulations.TechnicalIndication):
-                if articulation.displayText == "palm-mute":
-                    meta["palmMute"] = True
-                if articulation.displayText == "vibrato":
-                    meta["vibrato"] = True
+                if articulation.displayText:
+                    if articulation.displayText == "palm-mute":
+                        meta["palmMute"] = True
+                    if articulation.displayText == "vibrato":
+                        meta["vibrato"] = True
+                    if articulation.displayText.startswith("dynamics__"):
+                        dynamics = articulation.displayText[10:]
+                        meta["dynamics"] = dynamics
+                        if dynamics in DYNAMICS_VELOCITY_MAP:
+                            velocity = DYNAMICS_VELOCITY_MAP[dynamics]
+                        else:
+                            print(dynamics)
 
         computedOffset = music21.midi.translate.offsetToMidi(note.offset) + cumulativeDifference
 
@@ -104,9 +124,11 @@ def createMIDIEvents(part, track, verbose=False):
                         if event.pitch:
                             event.pitch += 12
 
-                # Scale up the velocities so that GP max = MIDI max
                 if event.type == "NOTE_ON":
-                    event.velocity = min(int(event.velocity * 1.42), 127)
+                    event.velocity = velocity
+#                # Scale up the velocities so that GP max = MIDI max
+#                if event.type == "NOTE_ON":
+#                    event.velocity = min(int(event.velocity * 1.42), 127)
 
                 # All skips are rendered as null pitches, which preserves
                 # timings
