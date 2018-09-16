@@ -4,7 +4,7 @@ import music21
 import sys
 
 """
-Translation methods for creating MIDI events from various data formats.
+Transformation methods for creating MIDI events from various data formats.
 """
 
 DYNAMICS_VELOCITY_MAP = {

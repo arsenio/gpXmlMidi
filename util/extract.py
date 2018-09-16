@@ -63,7 +63,5 @@ def getStreamTempo(stream, ticksPerQuarterNote, verbose=False):
         startTick = int(startTime * ticksPerQuarterNote)
         if tempos[startTick] != tempo:
             tempos[startTick] = tempo
-            if verbose:
-                print("♫ Detected tempo: {} BPM at {} seconds".format(tempo, startTime), file=sys.stderr)
 
     return tempos
