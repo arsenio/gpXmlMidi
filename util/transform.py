@@ -164,6 +164,7 @@ def createMIDIEvents(part, track, verbose=False):
 
             index = 0
             eventLength = len(noteEvents)
+            wasGraced = False
 
             while index < eventLength:
                 event = noteEvents[index]
@@ -182,8 +183,6 @@ def createMIDIEvents(part, track, verbose=False):
                                     wrapped = music21.base.ElementWrapper(bend)
                                     eventsAndMeta.append((wrapped, meta))
                             event.time = 0
-#                    index += 1
-#                    continue
 
                 if "bass" in partName:
                     if event.type == "NOTE_ON" or event.type == "NOTE_OFF":
