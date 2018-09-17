@@ -21,10 +21,9 @@ def standardizeExpressions(markup):
         symbol = symbols[0].name if symbols else "mf"
         notations = dynamics.parent
         technicals = notations.technical or markup.new_tag("technical")
-        if not technicals("other-technical.dynamics"):
-            expr = markup.new_tag("other-technical", class_="dynamics")
-            expr.append("dynamics__{}".format(symbol.lower()))
-            technicals.append(expr)
+        expr = markup.new_tag("other-technical", class_="dynamics")
+        expr.append("dynamics__{}".format(symbol.lower()))
+        technicals.append(expr)
 
     # Palm mutes (guitar only)
     for mute in markup("play"):
@@ -52,6 +51,23 @@ def standardizeExpressions(markup):
                         expr = markup.new_tag("other-technical", class_="vibrato")
                         expr.append("vibrato")
                     technicals.append(expr)
+
+        # Guitar Pro also support a variety of bends, with curve-based keystones,
+        # that simply doesn't map to MusicXML.
+        bends = note("bend")
+        if bends:
+            points = ["0"]
+            for bend in bends:
+                if bend.find("pre-bend"):
+                    points = [bend.find("bend-alter").text]
+                else:
+                    points.append(bend.find("bend-alter").text)
+            notations = note.notations or markup.new_tag("notations")
+            technicals = notations.technical or markup.new_tag("technical")
+            if not technicals("other-technical.bend"):
+                expr = markup.new_tag("other-technical", class_="bend")
+                expr.append("bend__{}".format(",".join(points)))
+            technicals.append(expr)
 
 def getStreamTempo(stream, ticksPerQuarterNote, verbose=False):
     """

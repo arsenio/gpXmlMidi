@@ -18,6 +18,8 @@ DYNAMICS_VELOCITY_MAP = {
     "fff": 127
 }
 
+BEND_INCREMENT_TICKS = 16
+
 def _findTieSkips(note):
     skips = {}
     innerNotes = note if note.isChord else [note]
@@ -41,6 +43,52 @@ def _findTieSkips(note):
         skips[innerNote.pitch.midi] = {"on": on, "off": off}
 
     return skips
+
+def _createBend(bendValues, duration, track):
+    events = []
+
+    valueCount = len(bendValues) - 1
+    segmentDuration = int(duration / valueCount)
+    timeTally = 0
+    lastValue = 0
+    index = 0
+
+    while index < valueCount:
+        start = float(bendValues[index])
+        end = float(bendValues[index + 1])
+        increment = int(segmentDuration / BEND_INCREMENT_TICKS)
+        subTimeTally = 0
+        for step in range(0, increment):
+            moment = step * (end - start) / increment
+            actual = round(100 * (start + moment))
+
+            delta = music21.midi.DeltaTime(track)
+            delta.time = BEND_INCREMENT_TICKS
+            events.append(delta)
+
+            bend = music21.midi.MidiEvent(track, type="PITCH_BEND", channel=1)
+            bend.setPitchBend(actual)
+            events.append(bend)
+
+            subTimeTally += BEND_INCREMENT_TICKS
+            timeTally += BEND_INCREMENT_TICKS
+        index += 1
+
+    if timeTally < duration:
+        delta = music21.midi.DeltaTime(track)
+        delta.time = timeTally - duration
+        events.append(delta)
+
+    delta = music21.midi.DeltaTime(track)
+    delta.time = 0
+    events.append(delta)
+
+    bend = music21.midi.MidiEvent(track, type="PITCH_BEND", channel=1)
+    bend.time = 0
+    bend.setPitchBend(0)
+    events.append(bend)
+
+    return events
 
 def createMIDIEvents(part, track, verbose=False):
 
@@ -82,8 +130,9 @@ def createMIDIEvents(part, track, verbose=False):
                         meta["dynamics"] = dynamics
                         if dynamics in DYNAMICS_VELOCITY_MAP:
                             velocity = DYNAMICS_VELOCITY_MAP[dynamics]
-                        else:
-                            print(dynamics)
+                    if articulation.displayText.startswith("bend__"):
+                        bend = articulation.displayText[6:]
+                        meta["bend"] = bend
 
         computedOffset = music21.midi.translate.offsetToMidi(note.offset) + cumulativeDifference
 
@@ -113,11 +162,28 @@ def createMIDIEvents(part, track, verbose=False):
             else:
                 noteEvents.extend(music21.midi.translate.noteToMidiEvents(note))
 
-            for event in noteEvents:
+            index = 0
+            eventLength = len(noteEvents)
+
+            while index < eventLength:
+                event = noteEvents[index]
                 event.channel = 1
 
                 if isinstance(event, music21.midi.DeltaTime):
                     offset += event.time
+                    if meta.get("bend"):
+                        if index < eventLength - 1:
+                            nextEvent = noteEvents[index + 1]
+                            if nextEvent.type == "NOTE_OFF":
+                                bendValues = meta.get("bend").split(",")
+                                bendEvents = _createBend(bendValues, event.time, track)
+
+                                for bend in bendEvents:
+                                    wrapped = music21.base.ElementWrapper(bend)
+                                    eventsAndMeta.append((wrapped, meta))
+                            event.time = 0
+#                    index += 1
+#                    continue
 
                 if "bass" in partName:
                     if event.type == "NOTE_ON" or event.type == "NOTE_OFF":
@@ -126,9 +192,6 @@ def createMIDIEvents(part, track, verbose=False):
 
                 if event.type == "NOTE_ON":
                     event.velocity = velocity
-#                # Scale up the velocities so that GP max = MIDI max
-#                if event.type == "NOTE_ON":
-#                    event.velocity = min(int(event.velocity * 1.42), 127)
 
                 # All skips are rendered as null pitches, which preserves
                 # timings
@@ -145,6 +208,8 @@ def createMIDIEvents(part, track, verbose=False):
 
                 # Guitar Pro for some reason shifts basslines down an octave
                 wrapped = music21.base.ElementWrapper(event)
-                eventsAndMeta.append((wrapped, meta))
+                eventsAndMeta.append((event, meta))
+
+                index += 1
 
     return eventsAndMeta
