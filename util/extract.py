@@ -51,6 +51,14 @@ def standardizeExpressions(markup):
                         expr = markup.new_tag("other-technical", class_="vibrato")
                         expr.append("vibrato")
                     technicals.append(expr)
+                ring = gp7.find("letring")
+                if ring:
+                    notations = note.notations or markup.new_tag("notations")
+                    technicals = notations.technical or markup.new_tag("technical")
+                    if not technicals("other-technical.letring"):
+                        expr = markup.new_tag("other-technical", class_="letring")
+                        expr.append("letring")
+                    technicals.append(expr)
 
         # Guitar Pro also support a variety of bends, with curve-based keystones,
         # that simply doesn't map to MusicXML.

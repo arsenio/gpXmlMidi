@@ -104,6 +104,7 @@ def createMIDIEvents(part, track, verbose=False):
     skips = []
 
     velocity = 80
+    wasRinging = False
     for note in notesAndRests:
 
         meta = {"partName": partName}
@@ -125,6 +126,8 @@ def createMIDIEvents(part, track, verbose=False):
                         meta["palmMute"] = True
                     if articulation.displayText == "vibrato":
                         meta["vibrato"] = True
+                    if articulation.displayText == "letring":
+                        meta["letring"] = True
                     if articulation.displayText.startswith("dynamics__"):
                         dynamics = articulation.displayText[10:]
                         meta["dynamics"] = dynamics
@@ -172,6 +175,7 @@ def createMIDIEvents(part, track, verbose=False):
 
                 if isinstance(event, music21.midi.DeltaTime):
                     offset += event.time
+
                     if meta.get("bend"):
                         if index < eventLength - 1:
                             nextEvent = noteEvents[index + 1]
@@ -207,8 +211,56 @@ def createMIDIEvents(part, track, verbose=False):
 
                 # Guitar Pro for some reason shifts basslines down an octave
                 wrapped = music21.base.ElementWrapper(event)
+
+                # Mostly, this is where we finalize the event. Some effects will need
+                # to be inserted after this point.
                 eventsAndMeta.append((event, meta))
 
+                if isinstance(event, music21.midi.DeltaTime):
+                    if meta.get("letring"):
+                        if not wasRinging:
+                            if index < eventLength - 1:
+                                nextEvent = noteEvents[index + 1]
+                                if nextEvent.type == "NOTE_OFF":
+                                    ring = music21.midi.MidiEvent(track, type="CONTROLLER_CHANGE", channel=1)
+                                    ring.pitch = 64     # CC 64 = Hold Pedal
+                                    ring.velocity = 64
+                                    wrapped = music21.base.ElementWrapper(ring)
+
+                                    eventsAndMeta.append((wrapped, meta))
+                                    delta = music21.midi.DeltaTime(track)
+                                    delta.time = 0
+                                    wrapped = music21.base.ElementWrapper(delta)
+                                    eventsAndMeta.append((wrapped, meta))
+                    else:
+                        if wasRinging:
+                            if index < eventLength - 1:
+                                nextEvent = noteEvents[index + 1]
+                                if nextEvent.type == "NOTE_OFF":
+                                    ring = music21.midi.MidiEvent(track, type="CONTROLLER_CHANGE", channel=1)
+                                    ring.pitch = 64     # CC 64 = Hold Pedal
+                                    ring.velocity = 0
+                                    wrapped = music21.base.ElementWrapper(ring)
+                                    eventsAndMeta.append((wrapped, meta))
+
+                                    delta = music21.midi.DeltaTime(track)
+                                    delta.time = 0
+                                    wrapped = music21.base.ElementWrapper(delta)
+                                    eventsAndMeta.append((wrapped, meta))
+
+                if isinstance(event, music21.midi.DeltaTime):
+                    if not meta.get("letring"):
+                        if wasRinging:
+                            if index < eventLength - 1:
+                                nextEvent = noteEvents[index + 1]
+                                if nextEvent.type == "NOTE_OFF":
+                                    wasRinging = False
+                    else:
+                        if not wasRinging:
+                            if index < eventLength - 1:
+                                nextEvent = noteEvents[index + 1]
+                                if nextEvent.type == "NOTE_OFF":
+                                    wasRinging = True
                 index += 1
 
     return eventsAndMeta
