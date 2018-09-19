@@ -14,7 +14,7 @@ class RealEightPostprocessor:
                 origValue = event._parameter2 * 128 + event._parameter1
                 # Value range is 0, 16383 (center is 8192)
                 delta = origValue - 8192
-                newValue = 8192 + round(delta / 5)
+                newValue = 8192 + round(delta / 5.5)
                 event._parameter2, event._parameter1 = divmod(newValue, 128)
 
             # Palm mutes are on a separate channel
