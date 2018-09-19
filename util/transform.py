@@ -20,6 +20,8 @@ DYNAMICS_VELOCITY_MAP = {
 
 BEND_INCREMENT_TICKS = 16
 
+TREMOLO_UNITS = {"1": 0.5, "2": 0.25, "3": 0.125}
+
 def _findTieSkips(note):
     skips = {}
     innerNotes = note if note.isChord else [note]
@@ -92,10 +94,35 @@ def _createBend(bendValues, duration, track):
 
 def createMIDIEvents(part, track, verbose=False):
 
+    # One special preprocess step: find any tremolo notes and
+    # split them into distinct notes.
+    notesAndRests = []
+    for note in part.flat.notesAndRests:
+        innerNotes = [note]
+
+        tremolos = [exp for exp in note.expressions if isinstance(exp, music21.expressions.Tremolo)]
+        if tremolos:
+            tremolo = str(tremolos[0].numberOfMarks)
+            unit = TREMOLO_UNITS.get(tremolo)
+            if unit:
+                innerNotes = []
+                originalLength = note.duration.quarterLength
+                count, remainder = divmod(originalLength, unit)
+                segments = [unit] * int(count)
+                if remainder:
+                    segments.append(remainder)
+
+                index = 0
+                while index < len(segments):
+                    note.quarterLength = segments[index]
+                    innerNotes.append(note)
+                    index += 1
+
+        notesAndRests.extend(innerNotes)
+
+    # With that last preprocessing out of the way, we know all of our notes
+    # and rests. We can proceed with true Music21 -> MIDI transformation.
     partName = part.partName.casefold()
-
-    notesAndRests = part.flat.notesAndRests
-
     eventsAndMeta = []
     meta = {}
 
@@ -110,6 +137,10 @@ def createMIDIEvents(part, track, verbose=False):
         meta = {"partName": partName}
 
         noteEvents = []
+
+        for expression in note.expressions:
+            if isinstance(expression, music21.expressions.Tremolo):
+                meta["tremolo"] = str(expression.numberOfMarks)
 
         for articulation in note.articulations:
             if isinstance(articulation, music21.articulations.StringHarmonic):
