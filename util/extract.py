@@ -35,6 +35,21 @@ def standardizeExpressions(markup):
             expr.append("palm-mute")
             technicals.append(expr)
 
+    # Unpitched note (drums only)
+    for unpitched in markup("unpitched"):
+        note = unpitched.parent
+        newPitch = "{}{}".format(unpitched.find("display-step").text,
+                                 unpitched.find("display-octave").text)
+        pitch = markup.new_tag("pitch")
+        step = markup.new_tag("step")
+        step.string = unpitched.find("display-step").text
+        octave = markup.new_tag("octave")
+        octave.string = unpitched.find("display-octave").text
+        # TODO: map these squirrelly values into GM drum map values
+        pitch.append(step)
+        pitch.append(octave)
+        note.append(pitch)
+
     # Guitar Pro 7 has a number of bizarre nonstandard entities
     # in their XML export.
     for note in markup("note"):

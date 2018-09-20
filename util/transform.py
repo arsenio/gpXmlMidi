@@ -188,7 +188,7 @@ def createMIDIEvents(part, track, verbose=False):
             noteEvents.append(off)
             offset = computedOffset
 
-        if not note.isRest:
+        if isinstance(note, music21.note.NotRest):
             skips = _findTieSkips(note)
 
             if note.isChord:

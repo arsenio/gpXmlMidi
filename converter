@@ -153,31 +153,28 @@ def main(args):
             if partName not in partNames:
                 partNames.add(partName)
 
-                if "Gtr" in partName or "Guitar" in partName or "Bass" in partName:
-                    if verbose:
-                        spinner = spin("Extracting the '{}' part".format(partName))
+                if verbose:
+                    spinner = spin("Extracting the '{}' part".format(partName))
 
-                    track = music21.midi.MidiTrack(1)
-                    eventsAndMeta = transform.createMIDIEvents(part,
-                                                               track,
-                                                               verbose=verbose)
+                track = music21.midi.MidiTrack(1)
+                eventsAndMeta = transform.createMIDIEvents(part,
+                                                           track,
+                                                           verbose=verbose)
 
-                    for processor in postprocs:
-                        eventsAndMeta = processor().run(eventsAndMeta)
-                    track.events = reduceEventsAndMeta(eventsAndMeta)
+                for processor in postprocs:
+                    eventsAndMeta = processor().run(eventsAndMeta)
+                track.events = reduceEventsAndMeta(eventsAndMeta)
 
-                    midiFile = music21.midi.MidiFile()
-                    midiFile.tracks.append(track)
-                    midiFile.tracks.append(tempoTrack)
+                midiFile = music21.midi.MidiFile()
+                midiFile.tracks.append(track)
+                midiFile.tracks.append(tempoTrack)
 
-                    midiFile.open(os.path.join(directory, "{}.mid".format(partName)), "wb")
-                    midiFile.write()
-                    midiFile.close()
+                midiFile.open(os.path.join(directory, "{}.mid".format(partName)), "wb")
+                midiFile.write()
+                midiFile.close()
 
-                    if verbose:
-                        spinner.succeed()
-
-#                part.write("midi", os.path.join(directory, "{}.mid".format(partName)))
+                if verbose:
+                    spinner.succeed()
 
 if __name__ == "__main__":
    main(sys.argv[1:])
