@@ -96,7 +96,7 @@ def getStreamTempo(stream, ticksPerQuarterNote, verbose=False):
     """
     Given a Music21 stream object, return a map of tempo regions
     """
-    tempos = {0: 120}
+    tempos = {}
     for startTime, endTime, mark in stream.metronomeMarkBoundaries():
         tempo = mark.numberSounding or mark.number
         startTick = int(startTime * ticksPerQuarterNote)
