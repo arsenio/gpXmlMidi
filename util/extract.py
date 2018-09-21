@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from bs4 import BeautifulSoup
+import music21
 import re
 import sys
 
@@ -97,10 +98,15 @@ def getStreamTempo(stream, ticksPerQuarterNote, verbose=False):
     Given a Music21 stream object, return a map of tempo regions
     """
     tempos = {}
-    for startTime, endTime, mark in stream.metronomeMarkBoundaries():
-        tempo = mark.numberSounding or mark.number
-        startTick = int(startTime * ticksPerQuarterNote)
-        if tempos[startTick] != tempo:
-            tempos[startTick] = tempo
+    try:
+        assert stream.seconds # If this fails, there are no metronome marks to detect
+        for startTime, endTime, mark in stream.metronomeMarkBoundaries():
+            print(startTime, endTime, mark)
+            tempo = mark.numberSounding or mark.number
+            startTick = int(startTime * ticksPerQuarterNote)
+            if startTick not in tempos or tempos[startTick] != tempo:
+                tempos[startTick] = tempo
+    except music21.exceptions21.StreamException:
+        pass
 
     return tempos
