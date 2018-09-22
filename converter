@@ -12,6 +12,7 @@ import tempfile
 
 from postprocess import (checkForPreprocessor, selectPreprocessors,
                          reduceEventsAndMeta)
+from postprocess.normalize import NormalizePostprocessor
 
 from util import extract
 from util import transform
@@ -33,12 +34,12 @@ def spin(text):
     return spinner
 
 def usage():
-    print("Usage: converter [-h/--help] [-v/--verbose] [-f/--force] [-p postprocessor] XML-filename", file=sys.stderr)
+    print("Usage: converter [-h/--help] [-v/--verbose] [-f/--force] [-p postprocessor] [-n/-normalize] XML-filename", file=sys.stderr)
     sys.exit(-1)
 
 def main(args):
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hvfp:", ["help", "verbose", "force", "postprocessor="])
+        opts, args = getopt.getopt(sys.argv[1:], "hvfp:n", ["help", "verbose", "force", "postprocessor=", "normalize"])
     except getopt.GetoptError as err:
         print(err)
         usage()
@@ -46,6 +47,7 @@ def main(args):
     verbose = False
     force = False
     postproc = None
+    normalize = False
 
     for o, a in opts:
         if o == "-v":
@@ -55,6 +57,8 @@ def main(args):
         elif o == "-p":
             assert checkForPreprocessor(a), "'{}' is not a recognized postprocessor".format(a)
             postproc = a
+        elif o == "-n":
+            normalize = True
         else:
             assert False, "illegal option"
 
@@ -62,6 +66,9 @@ def main(args):
         usage()
 
     postprocs = selectPreprocessors(postproc)
+    if normalize:
+        postprocs = postprocs + (NormalizePostprocessor,)
+
     filename = args[0]
 
     if not os.path.isfile(filename):
