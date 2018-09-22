@@ -18,7 +18,7 @@ DYNAMICS_VELOCITY_MAP = {
     "fff": 127
 }
 
-BEND_INCREMENT_TICKS = 16
+BEND_INCREMENT_TICKS = 64
 
 TREMOLO_UNITS = {"1": 0.5, "2": 0.25, "3": 0.125}
 
@@ -263,6 +263,8 @@ def createMIDIEvents(part, track, verbose=False):
                                     delta.time = 0
                                     wrapped = music21.base.ElementWrapper(delta)
                                     eventsAndMeta.append((wrapped, meta))
+
+                                    wasRinging = True
                     else:
                         if wasRinging:
                             if index < eventLength - 1:
@@ -279,19 +281,8 @@ def createMIDIEvents(part, track, verbose=False):
                                     wrapped = music21.base.ElementWrapper(delta)
                                     eventsAndMeta.append((wrapped, meta))
 
-                if isinstance(event, music21.midi.DeltaTime):
-                    if not meta.get("letring"):
-                        if wasRinging:
-                            if index < eventLength - 1:
-                                nextEvent = noteEvents[index + 1]
-                                if nextEvent.type == "NOTE_OFF":
                                     wasRinging = False
-                    else:
-                        if not wasRinging:
-                            if index < eventLength - 1:
-                                nextEvent = noteEvents[index + 1]
-                                if nextEvent.type == "NOTE_OFF":
-                                    wasRinging = True
+
                 index += 1
 
     return eventsAndMeta
