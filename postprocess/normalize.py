@@ -7,7 +7,7 @@ class NormalizePostprocessor:
         factor = 127 / maxVelocity
 
         for event, meta in eventsAndMeta:
-            if event.velocity:
+            if event.type == "NOTE_ON":
                 event.velocity = round(event.velocity * factor)
             newEventsAndMeta.append((event, meta))
 
