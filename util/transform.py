@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import math
 import music21
 import sys
 
@@ -47,6 +48,16 @@ def _findTieSkips(note):
     return skips
 
 def _createBend(bendValues, duration, track):
+    """
+    This function takes a list of bend function data points, in semitones,
+    and adds a series of CC MIDI events to the given MIDITrack, to match the
+    desired outcome.
+
+    Note that all bends are rendered with the same algorithm:
+    for each equal-length segment of the desired duration, the first half
+    of that segment will be curved via a cosine function, and the second
+    half will hold the target bend value.
+    """
     events = []
 
     valueCount = len(bendValues) - 1
@@ -58,11 +69,19 @@ def _createBend(bendValues, duration, track):
     while index < valueCount:
         start = float(bendValues[index])
         end = float(bendValues[index + 1])
-        increment = int(segmentDuration / BEND_INCREMENT_TICKS)
+        bendRange = end - start
+        halfSegmentDuration = round(segmentDuration / 2)
+        increment = int(halfSegmentDuration / BEND_INCREMENT_TICKS)
         subTimeTally = 0
+        actual = 0
         for step in range(0, increment):
-            moment = step * (end - start) / increment
-            actual = round(100 * (start + moment))
+            factor = step / increment
+            if bendRange < 0:
+                factor = math.cos(1.5708 * factor)
+            else:
+                factor = 1 - math.cos(1.5708 * factor)
+            bendValue = factor * bendRange
+            actual = round(100 * (start + bendValue))
 
             delta = music21.midi.DeltaTime(track)
             delta.time = BEND_INCREMENT_TICKS
@@ -74,16 +93,28 @@ def _createBend(bendValues, duration, track):
 
             subTimeTally += BEND_INCREMENT_TICKS
             timeTally += BEND_INCREMENT_TICKS
+
+        remainder = segmentDuration - subTimeTally
+        delta = music21.midi.DeltaTime(track)
+        delta.time = remainder
+        events.append(delta)
+
+        bend = music21.midi.MidiEvent(track, type="PITCH_BEND", channel=1)
+        bend.setPitchBend(actual)
+        events.append(bend)
+
+        timeTally += remainder
+
         index += 1
 
     if timeTally < duration:
         delta = music21.midi.DeltaTime(track)
         delta.time = timeTally - duration
         events.append(delta)
-
-    delta = music21.midi.DeltaTime(track)
-    delta.time = 0
-    events.append(delta)
+    else:
+        delta = music21.midi.DeltaTime(track)
+        delta.time = 0
+        events.append(delta)
 
     bend = music21.midi.MidiEvent(track, type="PITCH_BEND", channel=1)
     bend.time = 0
