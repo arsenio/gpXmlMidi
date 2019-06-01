@@ -157,6 +157,9 @@ def main(args):
 
         for part in score.parts:
             partName = part.partName
+            if isinstance(part, music21.stream.PartStaff):
+                partName = "{}-{}".format(part.getInstrument().partId, partName)
+
             if partName not in partNames:
                 partNames.add(partName)
 

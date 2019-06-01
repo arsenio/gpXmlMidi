@@ -15,6 +15,12 @@ def standardizeExpressions(markup):
     There are a number of permutations and traversals that we need to perform
     on Guitar Pro-generated MusicXML, before translating it into MIDI.
     """
+    # Barlines can have repeats (codas); Guitar Pro likes putting the
+    # "times" attribute in coda starts, but MusicXML technically does not.
+    for repeat in markup("repeat"):
+        if repeat.get("direction") == "forward":
+            del repeat["times"]
+
     # Dynamics can technically live in multple places; Guitar Pro tends to
     # put them on the notes only, in a way that music21 seems to miss.
     for dynamics in markup("dynamics"):
