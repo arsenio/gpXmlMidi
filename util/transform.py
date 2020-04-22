@@ -178,9 +178,10 @@ def createMIDIEvents(part, track, verbose=False):
                 meta["harmonic"] = articulation.harmonicType
 
                 if note.isChord:
-                    nonHighest = note.pitches[0:-1]
-                    for pitch in nonHighest:
-                        note.remove(pitch)
+                    if len(note.pitches) > 1:
+                        nonHighest = note.pitches[0:-1]
+                        for pitch in nonHighest:
+                            note.remove(pitch)
 
             if isinstance(articulation, music21.articulations.TechnicalIndication):
                 if articulation.displayText:
@@ -198,6 +199,9 @@ def createMIDIEvents(part, track, verbose=False):
                     if articulation.displayText.startswith("bend__"):
                         bend = articulation.displayText[6:]
                         meta["bend"] = bend
+
+        if isinstance(note, music21.note.NotRest) and note.noteheadParenthesis:
+            print("GHOST")
 
         computedOffset = music21.midi.translate.offsetToMidi(note.offset) + cumulativeDifference
 
