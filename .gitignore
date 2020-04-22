@@ -4,7 +4,10 @@
 
 .DS_Store
 
+bin/
 .env*
+lib/
 local
 .cache/
 __pycache__
+pyvenv.cfg
